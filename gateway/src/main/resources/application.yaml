@@ -1,0 +1,25 @@
+logging:
+  level:
+    org.springframework.security: trace
+    org.springframework.cloud.gateway: trace
+
+
+spring:
+  application:
+    name: gateway
+  security:
+    oauth2:
+      client:
+        registration:
+          oidc-client:
+            client-id: oidc-client
+            client-secret: secret
+            provider: oidc-client
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_basic
+            scope: openid
+        provider:
+          oidc-client:
+            issuer-uri: http://127.0.0.1:9000
+server:
+  port: 8080

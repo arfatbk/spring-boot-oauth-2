@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WorkspaceSettings">
+    <project name="gateway" path="$PROJECT_DIR$/../gateway" />
+    <project name="auth" path="$PROJECT_DIR$/../auth" />
+    <project name="resource" path="$PROJECT_DIR$/../resource" />
+    <option name="workspace" value="true" />
+  </component>
+</project>
