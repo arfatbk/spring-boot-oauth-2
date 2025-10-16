@@ -32,6 +32,8 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -86,15 +88,26 @@ public class AuthApplication {
                 throws Exception {
             http
                     .authorizeHttpRequests((authorize) -> authorize
+                            .requestMatchers("/*.css").permitAll()
+                            .requestMatchers("/*.js").permitAll()
                             .anyRequest().authenticated()
                     )
                     // Form login handles the redirect to the login page from the
                     // authorization server filter chain
-                    .formLogin(Customizer.withDefaults());
+                    .formLogin(form -> form
+                            .loginPage("/login").permitAll()
+                    );
 
             return http.build();
         }
 
+        @Controller
+        class LoginController {
+            @GetMapping("/login")
+            String login() {
+                return "login";
+            }
+        }
 
         @Bean
         InMemoryUserDetailsManager inMemoryUserDetailsManager(PasswordEncoder encoder) {
