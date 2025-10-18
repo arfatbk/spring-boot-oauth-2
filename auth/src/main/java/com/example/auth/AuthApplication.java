@@ -11,23 +11,27 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
+import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.oauth2.server.authorization.oidc.authentication.OidcUserInfoAuthenticationContext;
+import org.springframework.security.oauth2.server.authorization.oidc.authentication.OidcUserInfoAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
@@ -39,7 +43,9 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 
 @SpringBootApplication
 @EnableWebSecurity
@@ -53,10 +59,31 @@ public class AuthApplication {
     @Configuration
     static class SecurityConfig {
 
+
+        private static KeyPair generateRsaKey() {
+            KeyPair keyPair;
+            try {
+                KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+                keyPairGenerator.initialize(2048);
+                keyPair = keyPairGenerator.generateKeyPair();
+            } catch (Exception ex) {
+                throw new IllegalStateException(ex);
+            }
+            return keyPair;
+        }
+
         @Bean
         @Order(1)
         public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
                 throws Exception {
+            Function<OidcUserInfoAuthenticationContext, OidcUserInfo> userInfoMapper = (context) -> {
+                OidcUserInfoAuthenticationToken authentication = context.getAuthentication();
+                JwtAuthenticationToken principal = (JwtAuthenticationToken) authentication.getPrincipal();
+                UserDetails userDetails = this.inMemoryUserDetailsManager(null).loadUserByUsername(principal.getName()); //TODO: inject userDetailsService instead
+                Map<String, Object> claims = principal.getToken().getClaims();
+                claims.put("name", userDetails.getUsername());
+                return new OidcUserInfo(claims);
+            };
             OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                     OAuth2AuthorizationServerConfigurer.authorizationServer();
 
@@ -64,7 +91,11 @@ public class AuthApplication {
                     .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
                     .with(authorizationServerConfigurer, (authorizationServer) ->
                             authorizationServer
-                                    .oidc(Customizer.withDefaults())    // Enable OpenID Connect 1.0
+                                    .oidc((oidc) -> oidc
+                                            .userInfoEndpoint((userInfo) -> userInfo
+                                                    .userInfoMapper(userInfoMapper)
+                                            )
+                                    )
                     )
                     .authorizeHttpRequests((authorize) ->
                             authorize
@@ -101,14 +132,6 @@ public class AuthApplication {
             return http.build();
         }
 
-        @Controller
-        class LoginController {
-            @GetMapping("/login")
-            String login() {
-                return "login";
-            }
-        }
-
         @Bean
         InMemoryUserDetailsManager inMemoryUserDetailsManager(PasswordEncoder encoder) {
             var user = User
@@ -141,7 +164,21 @@ public class AuthApplication {
                     .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
                     .build();
 
-            return new InMemoryRegisteredClientRepository(oidcClient);
+
+            RegisteredClient uiClient = RegisteredClient.withId(UUID.randomUUID().toString())
+                    .clientId("ui-client")
+                    .clientSecret("{noop}uisecret")
+                    .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                    .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                    .redirectUri("http://localhost:3000/api/auth/callback/custom-oidc")
+                    .postLogoutRedirectUri("http://localhost:3000/login")
+                    .scope(OidcScopes.OPENID)
+                    .scope(OidcScopes.PROFILE)
+                    .clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build())
+                    .build();
+
+            return new InMemoryRegisteredClientRepository(oidcClient, uiClient);
         }
 
         @Bean
@@ -157,18 +194,6 @@ public class AuthApplication {
             return new ImmutableJWKSet<>(jwkSet);
         }
 
-        private static KeyPair generateRsaKey() {
-            KeyPair keyPair;
-            try {
-                KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-                keyPairGenerator.initialize(2048);
-                keyPair = keyPairGenerator.generateKeyPair();
-            } catch (Exception ex) {
-                throw new IllegalStateException(ex);
-            }
-            return keyPair;
-        }
-
         @Bean
         public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
             return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
@@ -177,6 +202,14 @@ public class AuthApplication {
         @Bean
         public AuthorizationServerSettings authorizationServerSettings() {
             return AuthorizationServerSettings.builder().build();
+        }
+
+        @Controller
+        class LoginController {
+            @GetMapping("/login")
+            String login() {
+                return "login";
+            }
         }
 
     }
