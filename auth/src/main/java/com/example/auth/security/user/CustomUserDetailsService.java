@@ -6,8 +6,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Arfat A. Chaus
@@ -20,7 +21,7 @@ class CustomUserDetailsService implements UserDetailsService { //extends JdbcUse
     private final PasswordEncoder passwordEncoder;
 
     //TODO: for testing only
-    private Map<String, DelegatingUserDetails> delegatingUserDetails = new HashMap<>();
+    private final Map<String, DelegatingUserDetails> delegatingUserDetails = new ConcurrentHashMap<>();
 
     private CustomUserDetailsService(SecretGenerator secretGenerator, PasswordEncoder passwordEncoder) {
         this.secretGenerator = secretGenerator;
@@ -33,8 +34,7 @@ class CustomUserDetailsService implements UserDetailsService { //extends JdbcUse
     private void initInMemoryUsers() {
         var user = DelegatingUserDetails
                 .username("user")
-                .passwordEncoder(passwordEncoder)
-                .password("password")
+                .password("{noop}password")
 //                .totpSecret(secretGenerator.generate())
                 .totpSecret("6ESDDL72AIF7TNDRGHDJKESQPNOUPPC2") //TODO: remove
                 .totpSetup(true) //TODO: Default to false, Ask user on first login to setup with QR
@@ -45,8 +45,7 @@ class CustomUserDetailsService implements UserDetailsService { //extends JdbcUse
 
         var admin = (DelegatingUserDetails) DelegatingUserDetails
                 .username("admin")
-                .passwordEncoder(passwordEncoder)
-                .password("password")
+                .password("{noop}password")
                 .roles("ADMIN")
                 .totpEnabled(false) // TODO:// Can be used to disable for users
                 .build();
@@ -57,6 +56,13 @@ class CustomUserDetailsService implements UserDetailsService { //extends JdbcUse
 
     @Override
     public DelegatingUserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return this.delegatingUserDetails.get(username);
+        var user =  this.delegatingUserDetails.get(username);
+        return DelegatingUserDetails
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .totpSecret(user.getTotpSecret())
+                .totpSetup(user.isTotpSetup())
+                .roles(user.getAuthorities().stream().map(a -> Objects.requireNonNull(a.getAuthority()).replace("ROLE_", "")).toArray(String[]::new))
+                .build();
     }
 }

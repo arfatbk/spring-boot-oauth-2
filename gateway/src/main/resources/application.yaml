@@ -1,25 +1,17 @@
-logging:
-  level:
-    org.springframework.security: trace
-    org.springframework.cloud.gateway: trace
-
-
 spring:
   application:
     name: gateway
   security:
     oauth2:
-      client:
-        registration:
-          oidc-client:
-            client-id: oidc-client
-            client-secret: secret
-            provider: oidc-client
-            authorization-grant-type: authorization_code
-            client-authentication-method: client_secret_basic
-            scope: openid
-        provider:
-          oidc-client:
-            issuer-uri: http://127.0.0.1:9000
-server:
-  port: 8080
+      resourceserver:
+        jwt:
+          issuer-uri: ${ISSUER_URI:http://localhost:9000}
+app:
+  services:
+    mandates:
+      url: ${MANDATES_SERVICE_URL:http://localhost:8081}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+    allowed-headers: ${CORS_ALLOWED_HEADERS:Authorization,Content-Type}
+    max-age: ${CORS_MAX_AGE:3600}

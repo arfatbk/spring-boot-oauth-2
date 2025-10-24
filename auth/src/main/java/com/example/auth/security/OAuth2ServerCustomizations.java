@@ -33,24 +33,6 @@ class OAuth2ServerCustomizations {
 
 
     @Bean
-    public RegisteredClientRepository registeredClientRepository() {
-        RegisteredClient oidcClient = RegisteredClient.withId(UUID.randomUUID().toString())
-                .clientId("oidc-client")
-                .clientSecret("{noop}secret")
-                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                .redirectUri("http://localhost:8080/login/oauth2/code/oidc-client")
-                .postLogoutRedirectUri("http://localhost:9000/login")
-                .scope(OidcScopes.OPENID)
-                .scope(OidcScopes.PROFILE)
-                .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
-                .build();
-
-        return new InMemoryRegisteredClientRepository(oidcClient);
-    }
-
-    @Bean
     public JWKSource<SecurityContext> jwkSource() {
         KeyPair keyPair = generateRsaKey();
         RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();

@@ -67,7 +67,7 @@ public class DelegatingUserDetails extends User {
         private String totpSecret;
         private boolean totpEnabled = true;
         private boolean totpSetup = false;
-        private PasswordEncoder passwordEncoder;
+        private final Function<String, String> passwordEncoder = (password) -> password;
 
         public Builder username(String username) {
             Assert.notNull(username, "username must not be null");
@@ -117,12 +117,8 @@ public class DelegatingUserDetails extends User {
             return this;
         }
 
-        public Builder passwordEncoder(PasswordEncoder encoder){
-            this.passwordEncoder = encoder;
-            return this;
-        }
         public DelegatingUserDetails build() {
-            String encodedPassword = this.password != null ? this.passwordEncoder.encode(this.password) : null;
+            String encodedPassword = this.password != null ? this.passwordEncoder.apply(this.password) : null;
 
             var delegatingUserDetails = new DelegatingUserDetails(this.username, encodedPassword, this.authorities);
             delegatingUserDetails.setTotpSetup(this.totpSetup);

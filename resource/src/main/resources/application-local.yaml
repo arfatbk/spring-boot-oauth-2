@@ -1,0 +1,25 @@
+
+logging:
+  level:
+    org.springframework: debug
+    org:
+      springframework:
+        web:
+          client: debug
+
+spring:
+  application:
+    name: resource
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9000
+upi:
+  auto-pay:
+    base-uri: https://api-staging.rocketpay.co.in
+    mandate:
+      create: /v2/merchant/mandates
+
+server:
+  port: 8081

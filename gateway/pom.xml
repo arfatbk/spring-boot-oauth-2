@@ -17,6 +17,7 @@
     <properties>
         <java.version>25</java.version>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
+        <spring-modulith.version>1.4.3</spring-modulith.version>
     </properties>
     <dependencies>
 
@@ -26,7 +27,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -35,14 +36,27 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway-server-webmvc</artifactId>
+            <version>4.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
@@ -58,11 +72,22 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>org.springframework.modulith</groupId>
+                <artifactId>spring-modulith-bom</artifactId>
+                <version>${spring-modulith.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

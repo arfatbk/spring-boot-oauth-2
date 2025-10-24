@@ -2,6 +2,8 @@ package com.example.auth.security.otpauthentication;
 
 import com.example.auth.security.user.DelegatingUserDetails;
 import dev.samstevens.totp.code.CodeVerifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,6 +22,8 @@ import java.util.HashSet;
 //@Service
 public class OTPAuthenticationProvider implements AuthenticationProvider {
 
+    private static final Logger logger = LoggerFactory.getLogger(OTPAuthenticationProvider.class);
+
     private final CodeVerifier verifier;
 
     public OTPAuthenticationProvider(CodeVerifier verifier) {
@@ -30,16 +34,24 @@ public class OTPAuthenticationProvider implements AuthenticationProvider {
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         OTPAuthenticationToken token = (OTPAuthenticationToken) authentication;
         String otp = token.getOtp();
-
+        if (logger.isTraceEnabled()) {
+            logger.trace("Authenticating OTP: {}", otp);
+        }
 
         try {
             var authn = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
             if (authn == null || authn.getPrincipal() == null) {
+                if (logger.isTraceEnabled()) {
+                    logger.trace("No prior authentication found in SecurityContext authn : {}", authn);
+                }
                 throw new BadCredentialsException("No prior authentication found");
             }
 
             var secret = ((DelegatingUserDetails) authn.getPrincipal()).getTotpSecret();
             if (!verifier.isValidCode(secret, otp)) {
+                if (logger.isTraceEnabled()) {
+                    logger.trace("Invalid OTP code provided: {}", otp);
+                }
                 throw new BadCredentialsException("Invalid OTP");
             }
 
@@ -59,8 +71,14 @@ public class OTPAuthenticationProvider implements AuthenticationProvider {
                     authn.getPrincipal(), authn.getCredentials(), authorities
             );
             SecurityContextHolder.getContext().setAuthentication(authenticated);
+            if (logger.isTraceEnabled()) {
+                logger.trace("OTP authentication successful for user: {}", authn.getName());
+            }
             return authenticated;
         } catch (Exception e) {
+            if (logger.isTraceEnabled()) {
+                logger.trace("OTP authentication failed with exception", e);
+            }
             throw new BadCredentialsException("Bad credentials", e);
         }
     }

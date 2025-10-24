@@ -1,0 +1,12 @@
+target/
+*.class
+*.jar
+*.war
+*.log
+.git/
+.gitignore
+.mvn/
+*.md
+Dockerfile
+docker-compose.yml
+

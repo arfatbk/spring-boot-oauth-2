@@ -1,8 +1,3 @@
-
-logging:
-  level:
-    org.springframework.security: trace
-
 spring:
   application:
     name: resource
@@ -10,9 +5,9 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:9000
-
-
-
-server:
-  port: 8081
+          issuer-uri: ${ISSUER_URI:http://localhost:9000}
+upi:
+  auto-pay:
+    base-uri: ${UPI_AUTO_PAY_BASE_URI}
+    mandate:
+      create: ${UPI_AUTO_PAY_MANDATE_CREATE}

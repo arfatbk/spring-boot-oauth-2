@@ -1,0 +1,49 @@
+server:
+  port: 9000
+
+logging:
+  level:
+    org.springframework.security: trace
+    com:
+      example:
+        auth:
+          security: trace
+
+
+spring:
+  application:
+    name: auth
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: ${DATABASE_DRIVER_CLASS_NAME}
+
+app:
+  security:
+    oauth2:
+      authorization-server:
+        issuer-uri: ${ISSUER_URI:http://localhost:9000}
+
+      clients:
+        api-gateway:
+          client-id: oidc-client
+          client-secret: "{noop}secret"
+          redirect-uri: http://localhost:8080/login/oauth2/code/oidc-client
+          post-logout-redirect-uri: http://localhost:9000/login
+          scopes:
+            - openid
+            - profile
+          refresh-token-time-to-live: PT24H   # 24 hours
+          access-token-time-to-live: PT1H     # 60 minutes
+        ui-client:
+          client-id: ui-client
+          client-secret: "{noop}uisecret"
+          redirect-uri: http://localhost:3000/api/auth/callback/custom-oidc
+          post-logout-redirect-uri: http://localhost:9000/login
+          scopes:
+            - openid
+            - profile
+          refresh-token-time-to-live: PT24H  # 24 hours
+          access-token-time-to-live: PT60M   # 60 minutes

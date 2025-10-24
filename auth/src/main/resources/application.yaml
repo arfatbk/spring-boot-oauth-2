@@ -5,30 +5,42 @@ logging:
   level:
     org.springframework.security: trace
 
+
 spring:
   application:
     name: auth
-#  security:
-##    user:
-##      name: user
-##      password: password
-#    oauth2:
-#      authorizationserver:
-#        client:
-#          oidc-client:
-#            registration:
-#              client-id: "spring"
-#              client-secret: "{noop}secret"
-#              client-authentication-methods:
-#                - "client_secret_basic"
-#              authorization-grant-types:
-#                - "authorization_code"
-#                - "refresh_token"
-#              redirect-uris:
-#                - "http://localhost:8080/login/oauth2/code/spring"
-#              post-logout-redirect-uris:
-#                - "http://localhost:8080/"
-#              scopes:
-#                - "openid"
-#                - "profile"
-#            require-authorization-consent: true
+
+
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: ${DATABASE_DRIVER_CLASS_NAME}
+
+app:
+  security:
+    oauth2:
+      authorization-server:
+        issuer-uri: ${ISSUER_URI:http://localhost:9000}
+
+      clients:
+        api-gateway:
+          client-id: ${API_GATEWAY_CLIENT_ID}
+          client-secret: ${API_GATEWAY_CLIENT_SECRET}
+          redirect-uri: ${API_GATEWAY_REDIRECT_URI}
+          post-logout-redirect-uri: ${API_GATEWAY_POST_LOGOUT_REDIRECT_URI}
+          scopes:
+            - openid
+            - profile
+          refresh-token-time-to-live: ${API_GATEWAY_REFRESH_TOKEN_TTL:PT24H}   # 24 hours
+          access-token-time-to-live: ${API_GATEWAY_ACCESS_TOKEN_TTL:PT1H}     # 60 minutes
+        ui-client:
+          client-id: ${UI_CLIENT_ID}
+          client-secret: ${UI_CLIENT_SECRET}
+          redirect-uri: ${UI_CLIENT_REDIRECT_URI}
+          post-logout-redirect-uri: ${UI_CLIENT_POST_LOGOUT_REDIRECT_URI}
+          scopes:
+            - openid
+            - profile
+          refresh-token-time-to-live: ${UI_CLIENT_REFRESH_TOKEN_TTL:PT24H}  # 24 hours
+          access-token-time-to-live: ${UI_CLIENT_ACCESS_TOKEN_TTL:PT60M}   # 60 minutes

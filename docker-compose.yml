@@ -1,0 +1,108 @@
+services:
+  auth:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    container_name: finsolis-auth
+    ports:
+      - "9000:9000"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=9000
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=trace
+      - JAVA_OPTS=-Xmx512m -Xms256m
+      - ISSUER_URI=http://auth:9000
+    networks:
+      - finsolis-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9000/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: finsolis-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+      - ISSUER_URI=http://auth:9000
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://auth:9000
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=trace
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_CLOUD_GATEWAY=trace
+      - APP_CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:4200
+      - APP_CORS_ALLOWED_METHODS=GET,POST,PUT,DELETE,OPTIONS
+      - APP_CORS_ALLOWED_HEADERS=Authorization,Content-Type
+      - MANDATES_SERVICE_URL=http://resource:8081
+      - APP_CORS_MAX_AGE=3600
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    networks:
+      - finsolis-network
+    depends_on:
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  resource:
+    build:
+      context: ./resource
+      dockerfile: Dockerfile
+    container_name: finsolis-resource
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8081
+      - ISSUER_URI=http://auth:9000
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://auth:9000
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=debug
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    networks:
+      - finsolis-network
+    depends_on:
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:latest
+    container_name: finsolis-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=finsolis
+      - POSTGRES_USER=finsolis
+      - POSTGRES_PASSWORD=finsolis-password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - finsolis-network
+    restart: unless-stopped
+
+networks:
+  finsolis-network:
+    driver: bridge
+
+volumes:
+  maven-repo:
+    driver: local
+  postgres-data:
+    driver: local
