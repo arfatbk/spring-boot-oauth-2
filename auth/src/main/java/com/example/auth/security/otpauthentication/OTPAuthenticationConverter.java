@@ -4,7 +4,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jspecify.annotations.Nullable;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationConverter;
 import org.springframework.util.StringUtils;
 
@@ -18,15 +20,21 @@ public class OTPAuthenticationConverter implements AuthenticationConverter {
     @Override
     public @Nullable Authentication convert(HttpServletRequest request) {
         String otp = request.getParameter(OTPConstants.OTP_PARAMETER_NAME);
-        String username = request.getParameter(OTPConstants.OTP_PRINCIPAL_NAME);
-        if (!StringUtils.hasText(otp)) {
-            this.logger.debug("No otp found in request");
-            return null;
-        } else if (!StringUtils.hasText(username)) {
-            this.logger.debug("No username found in request");
-            return null;
-        } else {
-            return OTPAuthenticationToken.unauthenticated(username, otp);
+        try {
+
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (!StringUtils.hasText(otp)) {
+                this.logger.debug("No otp found in request");
+                return null;
+            } else if (principal == null) {
+                this.logger.debug("No principal found in request");
+                return null;
+            } else {
+                return OTPAuthenticationToken.unauthenticated(principal, otp);
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            throw new BadCredentialsException("Bad credentials");
         }
     }
 }

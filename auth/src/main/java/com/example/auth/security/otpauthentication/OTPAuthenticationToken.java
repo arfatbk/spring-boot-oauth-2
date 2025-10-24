@@ -37,7 +37,7 @@ public class OTPAuthenticationToken extends AbstractAuthenticationToken {
         this.otp = "[PROTECTED]";
     }
 
-    public static OTPAuthenticationToken unauthenticated(String principal, String otp) {
+    public static OTPAuthenticationToken unauthenticated(Object principal, String otp) {
         return new OTPAuthenticationToken(principal, otp);
     }
 

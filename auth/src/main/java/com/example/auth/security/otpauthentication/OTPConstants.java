@@ -10,6 +10,7 @@ public final class OTPConstants {
     public static final String OTP_PRINCIPAL_NAME = "username";
     public static final String OTP_AUTHORITY_NAME = "OTP";
     public static final String OTP_URL = "/otp";
+    public static final String OTP_SETUP_URL = "/otp/setup";
 
     private OTPConstants() {}
 }

@@ -34,6 +34,9 @@ final class AuthzCustomizer {
                 .requestMatchers("/*.js").permitAll()
                 //Require login to access OTP endpoint
                 .requestMatchers(OTPConstants.OTP_URL).access(withUserNamePassword.authenticated())
+                .requestMatchers(OTPConstants.OTP_SETUP_URL).access(withUserNamePassword.authenticated())
+                //TODO: below verify endpoint not required. testing purpose only
+                .requestMatchers("/otp/verify").permitAll()
                 //require OTP Factor and ADMIN Role
                 .requestMatchers("/admin/**").access(withOTP.hasRole("ADMIN"))
                 //require OTP Factor for all other requests

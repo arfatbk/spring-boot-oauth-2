@@ -1,5 +1,7 @@
 package com.example.auth.security.otpauthentication;
 
+import com.example.auth.security.user.DelegatingUserDetails;
+import dev.samstevens.totp.code.CodeVerifier;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,43 +17,52 @@ import java.util.HashSet;
  * @author Arfat A. Chaus
  * since 2025-10-21
  */
+//@Service
 public class OTPAuthenticationProvider implements AuthenticationProvider {
 
-    //TODO" remove
-    private static final String MOCK_OTP = "123456"; // Mock OTP for validation
+    private final CodeVerifier verifier;
+
+    public OTPAuthenticationProvider(CodeVerifier verifier) {
+        this.verifier = verifier;
+    }
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         OTPAuthenticationToken token = (OTPAuthenticationToken) authentication;
         String otp = token.getOtp();
 
-        // Simulate OTP validation
-        if (!MOCK_OTP.equals(otp)) { //TODO: Replace with real OTP validation logic
-            throw new BadCredentialsException("Invalid OTP");
+
+        try {
+            var authn = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+            if (authn == null || authn.getPrincipal() == null) {
+                throw new BadCredentialsException("No prior authentication found");
+            }
+
+            var secret = ((DelegatingUserDetails) authn.getPrincipal()).getTotpSecret();
+            if (!verifier.isValidCode(secret, otp)) {
+                throw new BadCredentialsException("Invalid OTP");
+            }
+
+            var otpAuthority = FactorGrantedAuthority
+                    .withFactor(OTPConstants.OTP_AUTHORITY_NAME)
+                    .build();
+
+            var authorities = new HashSet<GrantedAuthority>();
+
+
+            authorities.add(otpAuthority);
+            authorities.addAll(authn.getAuthorities());
+
+            // Update the SecurityContext with the new authentication
+
+            UsernamePasswordAuthenticationToken authenticated = UsernamePasswordAuthenticationToken.authenticated(
+                    authn.getPrincipal(), authn.getCredentials(), authorities
+            );
+            SecurityContextHolder.getContext().setAuthentication(authenticated);
+            return authenticated;
+        } catch (Exception e) {
+            throw new BadCredentialsException("Bad credentials", e);
         }
-
-        var authn = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
-
-        var otpAuthority = FactorGrantedAuthority
-                .withFactor(OTPConstants.OTP_AUTHORITY_NAME)
-                .build();
-
-        var authorities = new HashSet<GrantedAuthority>();
-
-        if (authn == null || authn.getPrincipal() == null) {
-            throw new BadCredentialsException("No prior authentication found");
-        }
-
-        authorities.add(otpAuthority);
-        authorities.addAll(authn.getAuthorities());
-
-        // Update the SecurityContext with the new authentication
-
-        UsernamePasswordAuthenticationToken authenticated = UsernamePasswordAuthenticationToken.authenticated(
-                authn.getPrincipal(), authn.getCredentials(), authorities
-        );
-        SecurityContextHolder.getContext().setAuthentication(authenticated);
-        return authenticated;
     }
 
     @Override

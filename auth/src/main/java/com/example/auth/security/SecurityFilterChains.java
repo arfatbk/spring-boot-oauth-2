@@ -1,6 +1,8 @@
 package com.example.auth.security;
 
 import com.example.auth.security.otpauthentication.OTPAuthenticationFilter;
+import com.example.auth.security.otpauthentication.OTPAuthenticationProvider;
+import dev.samstevens.totp.code.CodeVerifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -20,11 +22,12 @@ import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 class SecurityFilterChains {
 
 
-    private final OTPAuthenticationFilter otpAuthenticationFilter;
+    private final CodeVerifier codeVerifier;
 
-    public SecurityFilterChains(OTPAuthenticationFilter otpAuthenticationFilter) {
-        this.otpAuthenticationFilter = otpAuthenticationFilter;
+    SecurityFilterChains(CodeVerifier codeVerifier) {
+        this.codeVerifier = codeVerifier;
     }
+
 
     //OAuth2 server
     @Bean
@@ -60,7 +63,7 @@ class SecurityFilterChains {
                 // Form login handles the redirect to the login page from the
                 // authorization server filter chain
                 .formLogin(form -> form.loginPage("/form-login").permitAll())
-                .addFilterBefore(otpAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new OTPAuthenticationFilter(new OTPAuthenticationProvider(this.codeVerifier)), UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(CustomExceptionHandlingConfigurer.withCustomizations());
         return http.build();
 
